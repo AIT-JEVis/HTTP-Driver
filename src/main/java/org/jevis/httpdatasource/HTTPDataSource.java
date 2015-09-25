@@ -37,7 +37,7 @@ import org.jevis.commons.driver.DataCollectorTypes;
 import org.jevis.commons.driver.Parser;
 import org.jevis.commons.driver.ParserFactory;
 import org.jevis.commons.driver.Result;
-import org.jevis.commons.driver.datasourcce.DataSource;
+import org.jevis.commons.driver.DataSource;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
@@ -93,7 +93,7 @@ public class HTTPDataSource implements DataSource {
 
                     this.importResult();
 
-                    setLastReadout(channel, _importer.getLatestDatapoint());
+                    DataSourceHelper.setLastReadout(channel, _importer.getLatestDatapoint());
                 }
             } catch (Exception ex) {
                 java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
@@ -275,20 +275,4 @@ public class HTTPDataSource implements DataSource {
         }
     }
 
-    private void setLastReadout(JEVisObject channel, DateTime lastDateTime) {
-        try {
-            String currentReadout = null;
-//        JEVisClass channelClass = channel.getJEVisClass();
-//        JEVisType readoutType = channelClass.getType(DataCollectorTypes.Channel.HTTPChannel.LAST_READOUT);
-            String toString = lastDateTime.toString(DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss"));
-
-            JEVisSample buildSample = channel.getAttribute(DataCollectorTypes.Channel.LAST_READOUT).buildSample(new DateTime(), toString);
-            buildSample.commit();
-//        List<JEVisSample> sampleList = new ArrayList<JEVisSample>();
-//        sampleList.add(buildSample);
-//        dp.getJEVisDatapoint().getAttribute(JEVisTypes.DataPoint.LAST_READOUT).addSamples(sampleList);
-        } catch (JEVisException ex) {
-            java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-    }
 }
