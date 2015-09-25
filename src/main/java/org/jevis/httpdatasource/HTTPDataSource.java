@@ -27,7 +27,6 @@ import org.jevis.api.JEVisAttribute;
 import org.jevis.api.JEVisClass;
 import org.jevis.api.JEVisException;
 import org.jevis.api.JEVisObject;
-import org.jevis.api.JEVisSample;
 import org.jevis.api.JEVisType;
 import org.jevis.commons.DatabaseHelper;
 import org.jevis.commons.driver.DataSourceHelper;
@@ -43,7 +42,7 @@ import org.joda.time.format.DateTimeFormat;
 
 /**
  *
- * @author max
+ * @author bf
  */
 public class HTTPDataSource implements DataSource {
 
@@ -141,6 +140,7 @@ public class HTTPDataSource implements DataSource {
             URL requestUrl;
             if (_userName == null || _password == null || _userName.equals("") || _password.equals("")) {
 
+                path = DataSourceHelper.replaceDateFromUntil(lastReadout, new DateTime(), path);
                 HttpURLConnection request = null;
                 if (!_serverURL.contains("://")) {
                     _serverURL = "http://" + _serverURL;
@@ -180,6 +180,7 @@ public class HTTPDataSource implements DataSource {
                 BasicHttpContext _localContext = new BasicHttpContext();
                 _httpClient = new DefaultHttpClient();
 
+                path = DataSourceHelper.replaceDateFromUntil(lastReadout, new DateTime(), path);
                 if (_ssl) {
                     DataSourceHelper.doTrustToCertificates();
                     _targetHost = new HttpHost(_serverURL, ((int) (long) _port), "https");
@@ -268,9 +269,11 @@ public class HTTPDataSource implements DataSource {
 
     private void initializeChannelObjects(JEVisObject httpObject) {
         try {
+            JEVisClass channelDirClass = httpObject.getDataSource().getJEVisClass(DataCollectorTypes.ChannelDirectory.HTTPChannelDirectory.NAME);
+            JEVisObject channelDir = httpObject.getChildren(channelDirClass, false).get(0);
             JEVisClass channelClass = httpObject.getDataSource().getJEVisClass(DataCollectorTypes.Channel.HTTPChannel.NAME);
-            _channels = httpObject.getChildren(channelClass, false);
-        } catch (JEVisException ex) {
+            _channels = channelDir.getChildren(channelClass, false);
+        } catch (Exception ex) {
             java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
     }
