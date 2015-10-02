@@ -218,10 +218,13 @@ public class HTTPDataSource implements DataSource {
 //        List<InputHandler> answerList = new ArrayList<InputHandler>();
 //        answerList.add(InputHandlerFactory.getInputConverter(answer));
         } catch (JEVisException ex) {
+            Logger.getLogger(HTTPDataSource.class.getName()).log(Level.ERROR, ex.getMessage());
             java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (MalformedURLException ex) {
+            Logger.getLogger(HTTPDataSource.class.getName()).log(Level.ERROR, ex.getMessage());
             java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (Exception ex) {
+            Logger.getLogger(HTTPDataSource.class.getName()).log(Level.ERROR, ex.getMessage());
             java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         return answer;
