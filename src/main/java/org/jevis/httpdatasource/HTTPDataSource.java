@@ -46,6 +46,27 @@ import org.joda.time.format.DateTimeFormat;
  */
 public class HTTPDataSource implements DataSource {
 
+    // interfaces
+    interface HTTP extends DataCollectorTypes.DataSource.DataServer {
+
+        public final static String NAME = "HTTP Server";
+        public final static String PASSWORD = "Password";
+        public final static String SSL = "SSL";
+        public final static String USER = "User";
+    }
+    
+    interface HTTPChannelDirectory extends DataCollectorTypes.ChannelDirectory {
+
+        public final static String NAME = "HTTP Channel Directory";
+    }
+    
+    interface HTTPChannel extends DataCollectorTypes.Channel {
+
+        public final static String NAME = "HTTP Channel";
+        public final static String PATH = "Path";
+    }
+
+    // member variables
     private Long _id;
     private String _name;
     private String _serverURL;
@@ -129,9 +150,9 @@ public class HTTPDataSource implements DataSource {
         List<InputStream> answer = new ArrayList<InputStream>();
         try {
             JEVisClass channelClass = channel.getJEVisClass();
-            JEVisType pathType = channelClass.getType(DataCollectorTypes.Channel.HTTPChannel.PATH);
+            JEVisType pathType = channelClass.getType(HTTPChannel.PATH);
             String path = DatabaseHelper.getObjectAsString(channel, pathType);
-            JEVisType readoutType = channelClass.getType(DataCollectorTypes.Channel.HTTPChannel.LAST_READOUT);
+            JEVisType readoutType = channelClass.getType(HTTPChannel.LAST_READOUT);
             DateTime lastReadout = DatabaseHelper.getObjectAsDate(channel, readoutType, DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss"));
             if (path.startsWith("/")) {
                 path = path.substring(1, path.length());
@@ -232,16 +253,16 @@ public class HTTPDataSource implements DataSource {
 
     private void initializeAttributes(JEVisObject httpObject) {
         try {
-            JEVisClass httpType = httpObject.getDataSource().getJEVisClass(DataCollectorTypes.DataSource.DataServer.HTTP.NAME);
-            JEVisType server = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.HOST);
-            JEVisType port = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.PORT);
-            JEVisType sslType = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.SSL);
-            JEVisType connectionTimeout = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.CONNECTION_TIMEOUT);
-            JEVisType readTimeout = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.READ_TIMEOUT);
-            JEVisType user = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.USER);
-            JEVisType password = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.PASSWORD);
-            JEVisType timezoneType = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.TIMEZONE);
-            JEVisType enableType = httpType.getType(DataCollectorTypes.DataSource.DataServer.HTTP.ENABLE);
+            JEVisClass httpType = httpObject.getDataSource().getJEVisClass(HTTP.NAME);
+            JEVisType server = httpType.getType(HTTP.HOST);
+            JEVisType port = httpType.getType(HTTP.PORT);
+            JEVisType sslType = httpType.getType(HTTP.SSL);
+            JEVisType connectionTimeout = httpType.getType(HTTP.CONNECTION_TIMEOUT);
+            JEVisType readTimeout = httpType.getType(HTTP.READ_TIMEOUT);
+            JEVisType user = httpType.getType(HTTP.USER);
+            JEVisType password = httpType.getType(HTTP.PASSWORD);
+            JEVisType timezoneType = httpType.getType(HTTP.TIMEZONE);
+            JEVisType enableType = httpType.getType(HTTP.ENABLE);
 
             _id = httpObject.getID();
             _name = httpObject.getName();
@@ -272,9 +293,9 @@ public class HTTPDataSource implements DataSource {
 
     private void initializeChannelObjects(JEVisObject httpObject) {
         try {
-            JEVisClass channelDirClass = httpObject.getDataSource().getJEVisClass(DataCollectorTypes.ChannelDirectory.HTTPChannelDirectory.NAME);
+            JEVisClass channelDirClass = httpObject.getDataSource().getJEVisClass(HTTPChannelDirectory.NAME);
             JEVisObject channelDir = httpObject.getChildren(channelDirClass, false).get(0);
-            JEVisClass channelClass = httpObject.getDataSource().getJEVisClass(DataCollectorTypes.Channel.HTTPChannel.NAME);
+            JEVisClass channelClass = httpObject.getDataSource().getJEVisClass(HTTPChannel.NAME);
             _channels = channelDir.getChildren(channelClass, false);
         } catch (Exception ex) {
             java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
