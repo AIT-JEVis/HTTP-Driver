@@ -11,7 +11,7 @@ import org.joda.time.DateTime;
  *
  * @author broder
  */
-public class HTTPChannel {
+public class Channel {
     private String _path;
     private DateTime _lastReadout;
 

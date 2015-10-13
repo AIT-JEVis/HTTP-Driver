@@ -95,7 +95,7 @@ public class JEVisHTTPDataSource implements DataSource {
 
     @Override
     public List<InputStream> sendSampleRequest(JEVisObject channel) {
-        HTTPChannel httpChannel = new HTTPChannel();
+        Channel httpChannel = new Channel();
 
         try {
             JEVisClass channelClass = channel.getJEVisClass();
