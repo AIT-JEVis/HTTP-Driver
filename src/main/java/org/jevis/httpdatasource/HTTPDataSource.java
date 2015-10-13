@@ -44,8 +44,29 @@ import org.joda.time.format.DateTimeFormat;
  *
  * @author bf
  */
-public class HTTPDataSource {
+public class HTTPDataSource implements DataSource {
 
+    // interfaces
+    interface HTTP extends DataCollectorTypes.DataSource.DataServer {
+
+        public final static String NAME = "HTTP Server";
+        public final static String PASSWORD = "Password";
+        public final static String SSL = "SSL";
+        public final static String USER = "User";
+    }
+    
+    interface HTTPChannelDirectory extends DataCollectorTypes.ChannelDirectory {
+
+        public final static String NAME = "HTTP Channel Directory";
+    }
+    
+    interface HTTPChannel extends DataCollectorTypes.Channel {
+
+        public final static String NAME = "HTTP Channel";
+        public final static String PATH = "Path";
+    }
+
+    // member variables
     private Long _id;
     private String _name;
     private String _serverURL;
@@ -58,6 +79,65 @@ public class HTTPDataSource {
     private String _timezone;
     private Boolean _enabled;
 
+    private Parser _parser;
+    private Importer _importer;
+    private List<JEVisObject> _channels;
+    private List<Result> _result;
+
+    private JEVisObject _dataSource;
+
+    @Override
+    public void parse(List<InputStream> input) {
+        _parser.parse(input);
+        _result = _parser.getResult();
+    }
+
+    @Override
+    public void run() {
+
+        for (JEVisObject channel : _channels) {
+
+            try {
+                _result = new ArrayList<Result>();
+                JEVisClass parserJevisClass = channel.getDataSource().getJEVisClass(DataCollectorTypes.Parser.NAME);
+                JEVisObject parser = channel.getChildren(parserJevisClass, true).get(0);
+
+                _parser = ParserFactory.getParser(parser);
+                _parser.initialize(parser);
+
+                List<InputStream> input = this.sendSampleRequest(channel);
+
+                this.parse(input);
+
+                if (!_result.isEmpty()) {
+
+                    this.importResult();
+
+                    DataSourceHelper.setLastReadout(channel, _importer.getLatestDatapoint());
+                }
+            } catch (Exception ex) {
+                java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            }
+        }
+    }
+
+    @Override
+    public void importResult() {
+        _importer.importResult(_result);
+    }
+
+    @Override
+    public void initialize(JEVisObject httpObject) {
+        _dataSource = httpObject;
+        initializeAttributes(httpObject);
+        initializeChannelObjects(httpObject);
+
+        _importer = ImporterFactory.getImporter(_dataSource);
+        if (_importer != null) {
+            _importer.initialize(_dataSource);
+        }
+
+    }
 
     /**
      * komplett überarbeiten!!!!!
@@ -65,11 +145,15 @@ public class HTTPDataSource {
      * @param channel
      * @return
      */
-    public List<InputStream> sendSampleRequest(HTTPChannel channel) {
+    @Override
+    public List<InputStream> sendSampleRequest(JEVisObject channel) {
         List<InputStream> answer = new ArrayList<InputStream>();
         try {
-            String path = channel.getPath();
-            DateTime lastReadout = channel.getLastReadout();
+            JEVisClass channelClass = channel.getJEVisClass();
+            JEVisType pathType = channelClass.getType(HTTPChannel.PATH);
+            String path = DatabaseHelper.getObjectAsString(channel, pathType);
+            JEVisType readoutType = channelClass.getType(HTTPChannel.LAST_READOUT);
+            DateTime lastReadout = DatabaseHelper.getObjectAsDate(channel, readoutType, DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss"));
             if (path.startsWith("/")) {
                 path = path.substring(1, path.length());
             }
@@ -167,48 +251,55 @@ public class HTTPDataSource {
         return answer;
     }
 
-    public void setId(Long _id) {
-        this._id = _id;
+    private void initializeAttributes(JEVisObject httpObject) {
+        try {
+            JEVisClass httpType = httpObject.getDataSource().getJEVisClass(HTTP.NAME);
+            JEVisType server = httpType.getType(HTTP.HOST);
+            JEVisType port = httpType.getType(HTTP.PORT);
+            JEVisType sslType = httpType.getType(HTTP.SSL);
+            JEVisType connectionTimeout = httpType.getType(HTTP.CONNECTION_TIMEOUT);
+            JEVisType readTimeout = httpType.getType(HTTP.READ_TIMEOUT);
+            JEVisType user = httpType.getType(HTTP.USER);
+            JEVisType password = httpType.getType(HTTP.PASSWORD);
+            JEVisType timezoneType = httpType.getType(HTTP.TIMEZONE);
+            JEVisType enableType = httpType.getType(HTTP.ENABLE);
+
+            _id = httpObject.getID();
+            _name = httpObject.getName();
+            _serverURL = DatabaseHelper.getObjectAsString(httpObject, server);
+            _port = DatabaseHelper.getObjectAsInteger(httpObject, port);
+            _connectionTimeout = DatabaseHelper.getObjectAsInteger(httpObject, connectionTimeout);
+            _readTimeout = DatabaseHelper.getObjectAsInteger(httpObject, readTimeout);
+            _ssl = DatabaseHelper.getObjectAsBoolean(httpObject, sslType);
+            JEVisAttribute userAttr = httpObject.getAttribute(user);
+            if (!userAttr.hasSample()) {
+                _userName = "";
+            } else {
+                _userName = (String) userAttr.getLatestSample().getValue();
+            }
+            JEVisAttribute passAttr = httpObject.getAttribute(password);
+            if (!passAttr.hasSample()) {
+                _password = "";
+            } else {
+                _password = (String) passAttr.getLatestSample().getValue();
+            }
+//            _lastReadout = DatabaseHelper.getObjectAsDate(httpObject, lastReadout, DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss"));
+            _timezone = DatabaseHelper.getObjectAsString(httpObject, timezoneType);
+            _enabled = DatabaseHelper.getObjectAsBoolean(httpObject, enableType);
+        } catch (JEVisException ex) {
+            Logger.getLogger(HTTPDataSource.class.getName()).log(Level.ERROR, null, ex);
+        }
     }
 
-    public void setName(String _name) {
-        this._name = _name;
+    private void initializeChannelObjects(JEVisObject httpObject) {
+        try {
+            JEVisClass channelDirClass = httpObject.getDataSource().getJEVisClass(HTTPChannelDirectory.NAME);
+            JEVisObject channelDir = httpObject.getChildren(channelDirClass, false).get(0);
+            JEVisClass channelClass = httpObject.getDataSource().getJEVisClass(HTTPChannel.NAME);
+            _channels = channelDir.getChildren(channelClass, false);
+        } catch (Exception ex) {
+            java.util.logging.Logger.getLogger(HTTPDataSource.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
     }
 
-    public void setServerURL(String _serverURL) {
-        this._serverURL = _serverURL;
-    }
-
-    public void setPort(Integer _port) {
-        this._port = _port;
-    }
-
-    public void setConnectionTimeout(Integer _connectionTimeout) {
-        this._connectionTimeout = _connectionTimeout;
-    }
-
-    public void setReadTimeout(Integer _readTimeout) {
-        this._readTimeout = _readTimeout;
-    }
-
-    public void setUserName(String _userName) {
-        this._userName = _userName;
-    }
-
-    public void setPassword(String _password) {
-        this._password = _password;
-    }
-
-    public void setSsl(Boolean _ssl) {
-        this._ssl = _ssl;
-    }
-
-    public void setTimezone(String _timezone) {
-        this._timezone = _timezone;
-    }
-
-    public void setEnabled(Boolean _enabled) {
-        this._enabled = _enabled;
-    }
-    
 }
